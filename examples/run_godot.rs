@@ -1,8 +1,4 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::{exit, Command, Stdio},
-};
+use std::{env, fs, path::{Path, PathBuf}, process::{exit, Command, Stdio}};
 
 use which::{which, which_in_global};
 
@@ -32,6 +28,11 @@ fn main() -> Result<(), std::io::Error> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .current_dir(&run_dir)
+        .arg("--debug")
+        .arg("--script")
+        .arg("--path")
+        .arg("../godot/")
+        .arg("addons/gut/gut_cmdln.gd")
         .spawn()?;
 
     let status = child.wait()?;
