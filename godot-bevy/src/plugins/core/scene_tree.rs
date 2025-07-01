@@ -372,6 +372,9 @@ fn create_scene_tree_entity(
 
         match event.event_type {
             SceneTreeEventType::NodeAdded => {
+                if !node.instance_id().lookup_validity() {
+                    break;
+                }
                 let mut ent = if let Some(ent) = ent {
                     commands.entity(ent)
                 } else {
