@@ -183,24 +183,23 @@ impl AssetLoader for GodotResourceAssetLoader {
         _settings: &(),
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        let path = load_context.path();
-        let godot_path = ensure_godot_path(path);
+        let path = load_context.asset_path().to_string();
 
         {
             let mut resource_loader = ResourceLoader::singleton();
-            let path_gstring = godot::builtin::GString::from(godot_path.clone());
+            let path_gstring = godot::builtin::GString::from(path.clone());
             resource_loader.load_threaded_request(&path_gstring);
         }
 
         {
             let mut tracker = LOADING_TRACKER.lock().unwrap();
-            tracker.insert(godot_path.clone(), LoadingState::Requested);
+            tracker.insert(path.clone(), LoadingState::Requested);
         }
 
         loop {
             let status = {
                 let mut resource_loader = ResourceLoader::singleton();
-                let path_gstring = godot::builtin::GString::from(godot_path.clone());
+                let path_gstring = godot::builtin::GString::from(path.clone());
                 resource_loader.load_threaded_get_status(&path_gstring)
             };
 
@@ -208,7 +207,7 @@ impl AssetLoader for GodotResourceAssetLoader {
                 ThreadLoadStatus::LOADED => {
                     let resource = {
                         let mut resource_loader = ResourceLoader::singleton();
-                        let path_gstring = godot::builtin::GString::from(godot_path.clone());
+                        let path_gstring = godot::builtin::GString::from(path.clone());
                         resource_loader.load_threaded_get(&path_gstring)
                     };
 
@@ -216,7 +215,7 @@ impl AssetLoader for GodotResourceAssetLoader {
                         Some(resource) => {
                             {
                                 let mut tracker = LOADING_TRACKER.lock().unwrap();
-                                tracker.insert(godot_path.clone(), LoadingState::Ready);
+                                tracker.insert(path.clone(), LoadingState::Ready);
                             }
 
                             let handle = GodotResourceHandle::new(resource);
@@ -226,11 +225,11 @@ impl AssetLoader for GodotResourceAssetLoader {
                             // Update tracker
                             {
                                 let mut tracker = LOADING_TRACKER.lock().unwrap();
-                                tracker.insert(godot_path.clone(), LoadingState::Failed);
+                                tracker.insert(path.clone(), LoadingState::Failed);
                             }
 
                             return Err(GodotAssetLoaderError::ResourceLoadFailed(format!(
-                                "Failed to get loaded Godot resource: {godot_path}"
+                                "Failed to get loaded Godot resource: {path}"
                             )));
                         }
                     }
@@ -238,27 +237,27 @@ impl AssetLoader for GodotResourceAssetLoader {
                 ThreadLoadStatus::FAILED => {
                     {
                         let mut tracker = LOADING_TRACKER.lock().unwrap();
-                        tracker.insert(godot_path.clone(), LoadingState::Failed);
+                        tracker.insert(path.clone(), LoadingState::Failed);
                     }
 
                     return Err(GodotAssetLoaderError::ResourceLoadFailed(format!(
-                        "Godot ResourceLoader failed to load: {godot_path}"
+                        "Godot ResourceLoader failed to load: {path}"
                     )));
                 }
                 ThreadLoadStatus::INVALID_RESOURCE => {
                     {
                         let mut tracker = LOADING_TRACKER.lock().unwrap();
-                        tracker.insert(godot_path.clone(), LoadingState::Failed);
+                        tracker.insert(path.clone(), LoadingState::Failed);
                     }
 
                     return Err(GodotAssetLoaderError::ResourceLoadFailed(format!(
-                        "Invalid resource path or corrupted resource: {godot_path}"
+                        "Invalid resource path or corrupted resource: {path}"
                     )));
                 }
                 _ => {
                     {
                         let mut tracker = LOADING_TRACKER.lock().unwrap();
-                        tracker.insert(godot_path.clone(), LoadingState::Loading);
+                        tracker.insert(path.clone(), LoadingState::Loading);
                     }
 
                     futures_lite::future::yield_now().await;
@@ -273,16 +272,7 @@ impl AssetLoader for GodotResourceAssetLoader {
             "res", "tres", // Resources
             "jpg", "jpeg", "png", // Images
             "wav", "mp3", "ogg", "aac", // Audio
+            "", // uid
         ]
-    }
-}
-
-/// Ensures a path has the proper Godot resource prefix.
-fn ensure_godot_path(path: &Path) -> String {
-    let path_str = path.to_string_lossy();
-    if path_str.starts_with("res://") || path_str.starts_with("user://") {
-        path_str.to_string()
-    } else {
-        format!("res://{path_str}")
     }
 }
