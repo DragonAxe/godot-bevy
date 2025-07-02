@@ -272,7 +272,7 @@ impl AssetLoader for GodotResourceAssetLoader {
             "res", "tres", // Resources
             "jpg", "jpeg", "png", // Images
             "wav", "mp3", "ogg", "aac", // Audio
-            "", // uid
+            "",    // uid
         ]
     }
 }
