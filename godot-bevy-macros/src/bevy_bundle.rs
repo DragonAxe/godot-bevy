@@ -235,7 +235,8 @@ pub fn bevy_bundle(input: DeriveInput) -> syn::Result<TokenStream2> {
         fn #create_bundle_fn_name(
             commands: &mut bevy::ecs::system::Commands,
             entity: bevy::ecs::entity::Entity,
-            handle: &godot_bevy::interop::GodotNodeHandle,
+            handle: &mut godot_bevy::interop::GodotNodeHandle,
+            signals: &godot_bevy::plugins::signals::GodotSignals,
         ) -> bool {
             // Try to get the node as the correct type
             if let Some(godot_node) = handle.clone().try_get::<#struct_name>() {

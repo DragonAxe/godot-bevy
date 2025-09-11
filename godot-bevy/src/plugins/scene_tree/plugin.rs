@@ -3,7 +3,7 @@ use super::node_type_checking_generated::{
     remove_comprehensive_node_type_markers,
 };
 use crate::plugins::core::SceneTreeComponentRegistry;
-use crate::prelude::{GodotScene, main_thread_system};
+use crate::prelude::{GodotScene, GodotSignals, main_thread_system};
 use crate::{
     interop::GodotNodeHandle,
     plugins::collisions::{
@@ -131,6 +131,7 @@ fn initialize_scene_tree(
     mut entities: Query<(&mut GodotNodeHandle, Entity, Option<&ProtectedNodeEntity>)>,
     config: Res<SceneTreeConfig>,
     component_registry: Res<SceneTreeComponentRegistry>,
+    signals: GodotSignals,
 ) {
     let root = scene_tree.get().get_root().unwrap();
 
@@ -183,6 +184,7 @@ fn initialize_scene_tree(
         &mut entities,
         &config,
         &component_registry,
+        &signals,
     );
 }
 
@@ -315,6 +317,7 @@ fn create_scene_tree_entity(
     entities: &mut Query<(&mut GodotNodeHandle, Entity, Option<&ProtectedNodeEntity>)>,
     config: &SceneTreeConfig,
     component_registry: &SceneTreeComponentRegistry,
+    signals: &GodotSignals,
 ) {
     let mut ent_mapping = entities
         .iter()
@@ -327,7 +330,7 @@ fn create_scene_tree_entity(
         .unwrap()
         .get_node_as::<Node>("/root/BevyAppSingleton/CollisionWatcher");
 
-    for event in events.into_iter() {
+    for mut event in events.into_iter() {
         trace!(target: "godot_scene_tree_events", event = ?event);
 
         let mut node = event.node.clone();
@@ -426,7 +429,7 @@ fn create_scene_tree_entity(
                 ent_mapping.insert(node.instance_id(), (ent, None));
 
                 // Try to add any registered bundles for this node type
-                super::autosync::try_add_bundles_for_node(commands, ent, &event.node);
+                super::autosync::try_add_bundles_for_node(commands, ent, &mut event.node, signals);
 
                 if config.add_child_relationship
                     && node.instance_id() != scene_root.instance_id()
@@ -494,6 +497,7 @@ fn read_scene_tree_events(
     mut entities: Query<(&mut GodotNodeHandle, Entity, Option<&ProtectedNodeEntity>)>,
     config: Res<SceneTreeConfig>,
     component_registry: Res<SceneTreeComponentRegistry>,
+    signals: GodotSignals,
 ) {
     create_scene_tree_entity(
         &mut commands,
@@ -502,5 +506,6 @@ fn read_scene_tree_events(
         &mut entities,
         &config,
         &component_registry,
+        &signals,
     );
 }

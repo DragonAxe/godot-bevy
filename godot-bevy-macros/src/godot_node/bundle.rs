@@ -366,7 +366,8 @@ pub fn godot_node_bundle_impl(input: DeriveInput) -> syn::Result<TokenStream2> {
         fn #create_bundle_fn_name(
             commands: &mut bevy::ecs::system::Commands,
             entity: bevy::ecs::entity::Entity,
-            handle: &godot_bevy::interop::GodotNodeHandle,
+            handle: &mut godot_bevy::interop::GodotNodeHandle,
+            signals: &godot_bevy::plugins::signals::GodotSignals,
         ) -> bool {
             if let Some(godot_node) = handle.clone().try_get::<#godot_node_name>() {
                 let bundle = #struct_name::from_godot_node(&godot_node);

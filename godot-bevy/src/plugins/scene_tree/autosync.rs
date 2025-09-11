@@ -9,17 +9,17 @@
 //! Bevy app. When you use `#[derive(BevyBundle)]`, the macro automatically
 //! generates the necessary bundle creation function and registers it with the global registry.
 
+use crate::interop::GodotNodeHandle;
 use bevy::{
     app::App,
     ecs::{entity::Entity, system::Commands},
 };
+use godot_bevy::prelude::GodotSignals;
 use std::sync::RwLock;
 use tracing::trace;
 
-use crate::interop::GodotNodeHandle;
-
 /// Function type for creating bundles from Godot nodes
-pub type BundleCreatorFn = fn(&mut Commands, Entity, &GodotNodeHandle) -> bool;
+pub type BundleCreatorFn = fn(&mut Commands, Entity, &mut GodotNodeHandle, &GodotSignals) -> bool;
 
 /// Registry entry for auto-sync bundles using the inventory crate
 pub struct AutoSyncBundleRegistry {
@@ -56,14 +56,15 @@ pub fn register_all_autosync_bundles(_app: &mut App) {
 pub fn try_add_bundles_for_node(
     commands: &mut Commands,
     entity: Entity,
-    node_handle: &GodotNodeHandle,
+    node_handle: &mut GodotNodeHandle,
+    signals: &GodotSignals,
 ) {
     let registry = BUNDLE_REGISTRY.read().unwrap();
     if let Some(entries) = &*registry {
         for entry in entries {
             // Try to create and add the bundle
             // The function will check if the node is the right type and if the bundle is already added
-            if (entry.create_bundle_fn)(commands, entity, node_handle) {
+            if (entry.create_bundle_fn)(commands, entity, node_handle, signals) {
                 trace!(
                     "Added bundle for {} to entity {:?}",
                     entry.godot_class_name, entity
